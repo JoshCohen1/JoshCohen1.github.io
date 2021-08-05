@@ -1,0 +1,342 @@
+---
+title: "R MarkDown"
+author: "Josh Cohen"
+date: "7/26/2021"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## R Markdown Google Data Analytics Capstone Project (Using Mac)
+
+This file details the the rationale behind various aspects of the R code
+utilized during the course of this project. I intend to use a
+conversational tone in my explanation of each section, operating under
+the assumption that if I can explain it in a way that anyone can
+understand, then I must have a mastery of the subject.
+
+```{r}
+r = getOption("repos")
+r["CRAN"] = "http://cran.us.r-project.org"
+options(repos = r)
+```
+
+
+## Setting The Stage With Packages
+
+I began by installing all of the packages of which I am currently aware.
+Installing the packages is equivalent to downloading it to the system,
+but it doesn't make them usable within the context of the program.
+
+```{r}
+install.packages("tidyverse")
+install.packages("lubridate")
+install.packages("readxl")
+install.packages("skimr")
+install.packages("janitor")
+install.packages("chron")
+```
+
+## Making The Packages Discoverable/Usable
+
+The library() function loads the packages into the program so that they are both discoverable and usable within RStudio.
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(readxl)
+library(skimr)
+library(janitor)
+library(chron)
+```
+
+## Selecting The Working Directory
+
+The working directory is like an address.  R needs specific instructions to find the directory where the CSV or excel files are hidden before loading them into RStudio.  Without identifying a working directory, it's like trying to drive to a specific restaurant, which is an hour away from your home, without having an address, it's fruitless.  R doesn't know what to do without a working directory and it returns an error.  To alter the current working directory, you can apply the setwd() command and insert your desired working directory within the parentheses.  You can find a file's working directory by right clicking the file name in your Mac's finder and selecting the "get info" option. The item listed next to the word "where" is the working directory.
+
+## &
+
+## Read In and Rename The CSV Files
+
+Using the read_csv() command loads csv files into RStudio.  Sometimes it helps to rename the files in a way that makes them easier to identify and it also simplifies the process of including them in future formulas. Dropping in one of these assignment operators "<-" assigns a new name to a whole file or a column that has been manipulated. 
+
+```{r}
+setwd("/Users/cjmai/Documents/Google Data Analytics Bike Share Project 1/CSV")
+
+q2_2019 <- read_csv("Divvy_Trips_2019_Q2")
+q3_2019 <- read_csv("Divvy_Trips_2019_Q3.csv")
+q4_2019 <- read_csv("Divvy_Trips_2019_Q4.csv")
+q1_2020 <- read_csv("Divvy_Trips_2020_Q1.csv")
+```
+
+## Renaming Columns
+
+Our end goal is to join the 4 DataFrames into a single DataFrame.  Combining the DataFrames requires us to homogenize the column names so that they can find their equivalent column in the other DataFrames and pair up, which is what the rename() function is used for.  We put the DataFrame that we are using before the first comma, next we list the new column names paired with the old column names, separated by an equals sign.  This resets the old column names to the new column names.
+
+```{r}
+(q4_2019 <- rename(q4_2019
+                   ,ride_id = trip_id
+                   ,rideable_type = bikeid 
+                   ,started_at = start_time  
+                   ,ended_at = end_time  
+                   ,start_station_name = from_station_name 
+                   ,start_station_id = from_station_id 
+                   ,end_station_name = to_station_name 
+                   ,end_station_id = to_station_id 
+                   ,member_casual = usertype))
+
+(q3_2019 <- rename(q3_2019
+                   ,ride_id = trip_id
+                   ,rideable_type = bikeid 
+                   ,started_at = start_time  
+                   ,ended_at = end_time  
+                   ,start_station_name = from_station_name 
+                   ,start_station_id = from_station_id 
+                   ,end_station_name = to_station_name 
+                   ,end_station_id = to_station_id 
+                   ,member_casual = usertype))
+
+(q2_2019 <- rename(q2_2019
+                   ,ride_id = "01 - Rental Details Rental ID"
+                   ,rideable_type = "01 - Rental Details Bike ID" 
+                   ,started_at = "01 - Rental Details Local Start Time"  
+                   ,ended_at = "01 - Rental Details Local End Time"  
+                   ,start_station_name = "03 - Rental Start Station Name" 
+                   ,start_station_id = "03 - Rental Start Station ID"
+                   ,end_station_name = "02 - Rental End Station Name" 
+                   ,end_station_id = "02 - Rental End Station ID"
+                   ,member_casual = "User Type"))
+```
+
+## Structure
+
+This gives the structure of each DataFrame.
+
+```{r}
+str(q1_2020)
+str(q4_2019)
+str(q3_2019)
+str(q2_2019)
+```
+
+## Changing The Columns Data Type 
+
+Mutate is an interesting function that can serve a variety of purposes. Mutate can change aspects of a column within a DataFrame, add a column to a DataFrame, etc. 
+
+```{r}
+q4_2019 <-  mutate(q4_2019, ride_id = as.character(ride_id)
+                   ,rideable_type = as.character(rideable_type)) 
+q3_2019 <-  mutate(q3_2019, ride_id = as.character(ride_id)
+                   ,rideable_type = as.character(rideable_type)) 
+q2_2019 <-  mutate(q2_2019, ride_id = as.character(ride_id)
+                   ,rideable_type = as.character(rideable_type)) 
+```
+
+## Merging DataFrames
+
+Once the column names and data types are matched up across the various DataFrames they can be stacked to form a new DataFrame.  The bind_rows() function will combine all of the DataFrames listed within the parenthesis. Using the "<-" operator will allow you to assign a different name to your newly created aggregate DataFrame. 
+
+```{r}
+all_trips <- bind_rows(q2_2019, q3_2019, q4_2019, q1_2020)
+```
+
+## Dropping Irrelevant Columns
+
+Not every column in a DataFrame will be useful in relation to helping to answer the question at hand.  Some columns in certain DataFrames might have no equivalent in other DataFrames.  Whatever the reason, there is always a chance that certain columns shouldn't find a home in your new DataFrame.  This formula selects certain columns and subtracts them from the DataFrame, hence "select" and "- or subtract" and "c for column", so this makes a lot of sense.
+
+```{r}
+all_trips <- all_trips %>%  
+  select(-c(start_lat, start_lng, end_lat, end_lng, birthyear, gender, "01 - Rental Details Duration In Seconds Uncapped", "05 - Member Details Member Birthday Year", "Member Gender", "tripduration"))
+```
+
+## Overview
+
+The following is a set of functions that give an overview of the combined DataFrame, therefore, we know what we are dealing with before we proceed.
+
+```{r}
+colnames(all_trips)  
+nrow(all_trips)  
+dim(all_trips)  
+head(all_trips) 
+str(all_trips)  
+summary(all_trips) 
+```
+
+## Examining The "members_casual" Variable
+
+Here the "$" is used to make a specific selection.  In this case, we are taking the all_trips DataFrame and selecting the members_casual variable. Combining this with the table() command gives us the frequency of the different elements within this column.
+
+```{r}
+table(all_trips$member_casual)
+```
+
+## Recategorizing Users
+
+The options for this category should be binary.  We should only have "member" and "casual" as options for this variable.  Instead, we have "Subscriber", "Customer", "member, and "casual".  The mutate() function is applied and the member_casual column is selected.  Recode() is used to switch all of the items listed as "Subscriber" to "member" and the ones listed as "Customer" are changed to "casual".
+
+```{r}
+all_trips <- all_trips %>% 
+  mutate(member_casual = recode(member_casual
+                                ,"Subscriber" = "member"
+                                ,"Customer" = "casual"))
+```
+
+## Confirming The Recategorization
+
+We then rerun the table() function to confirm that we now only have two options for the variable member_casual, as opposed to four.
+
+```{r}
+table(all_trips$member_casual)
+```
+
+## Adding Additional Columns
+
+We are adding several new variables using an assignment operator.  We can tell that we are adding a new column since we are using "$" to the left of the column names (which are names for new columns that do not currently exist within the all_trips DataFrame). The as.date means that the new columns will be treated as dates. The "%m" shows this column will use the month part of the date field, "%d" is for day, etc.
+
+```{r}
+all_trips$date <- as.Date(all_trips$started_at) 
+all_trips$month <- format(as.Date(all_trips$date), "%m")
+all_trips$day <- format(as.Date(all_trips$date), "%d")
+all_trips$year <- format(as.Date(all_trips$date), "%Y")
+all_trips$day_of_week <- format(as.Date(all_trips$date), "%A")
+```
+
+## Calculating The Ride Length
+
+As of now, we have no way of knowing how long each individual ride was.  We can use the difftime() function to get the difference in time between the start of the ride "stared_at" and the end "ended_at".
+
+```{r}
+all_trips$ride_length <- difftime(all_trips$ended_at,all_trips$started_at)
+```
+
+## Check The Structure of The all_trips DataFrame
+
+We are using the str() function to check the structure of the all_trips DataFrame.
+
+```{r}
+str(all_trips)
+```
+
+## Formating Ride Length Data Type
+
+The as.numeric() command here ensures that when the assignment operator is applied, the ride_length column in the DataFrame will be in numeric format.
+
+```{r}
+is.factor(all_trips$ride_length)
+all_trips$ride_length <- as.numeric(as.character(all_trips$ride_length))
+is.numeric(all_trips$ride_length)
+```
+
+## Removing Invalid Data
+
+We are using "!" to remove bad data by extracting items that are "==" exactly equal to the designation "HQ QR" or trips that were negative in duration. The final result is put in a new DataFrame called all_trips_V2.
+
+```{r}
+all_trips_v2 <- all_trips[!(all_trips$start_station_name == "HQ QR" | all_trips$ride_length<0),]
+```
+
+## Kicking Off Our Analysis With Some Basic Statistics
+
+We're specifying the DataFrame and column name within the parenthesis of a few functions so that we can generate some descriptive statistics.
+
+```{r}
+mean(all_trips_v2$ride_length) 
+median(all_trips_v2$ride_length) 
+max(all_trips_v2$ride_length) 
+min(all_trips_v2$ride_length) 
+```
+
+If we want to use a quicker approach to do the same thing, we can just use the summary() function.
+
+```{r}
+summary(all_trips_v2$ride_length)
+```
+
+## Members Vs. Casual Riders (Various Statistics)
+
+We are using the function below to make a comparison between members and casual users.
+
+```{r}
+aggregate(all_trips_v2$ride_length ~ all_trips_v2$member_casual, FUN = mean)
+aggregate(all_trips_v2$ride_length ~ all_trips_v2$member_casual, FUN = median)
+aggregate(all_trips_v2$ride_length ~ all_trips_v2$member_casual, FUN = max)
+aggregate(all_trips_v2$ride_length ~ all_trips_v2$member_casual, FUN = min)
+```
+
+
+Here we are displaying average ride time as a function of the day of the week and members vs casual users.
+
+```{r}
+aggregate(all_trips_v2$ride_length ~ all_trips_v2$member_casual + all_trips_v2$day_of_week, FUN = mean)
+```
+
+## Re-Ordering Day of The Week
+
+This allows us to re-order days when they appear in output.  Since the days didn't come out in the order that we wanted them to, we can use the ordered() function, which helps us to rearrange them.  The "levels=c" command lets us designate the actual order. 
+
+```{r}
+all_trips_v2$day_of_week <- ordered(all_trips_v2$day_of_week, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+```
+
+## Ride Length Statistics
+
+This shows the mean ride length as a function of member vs casual and day of the week.
+
+```{r}
+aggregate(all_trips_v2$ride_length ~ all_trips_v2$member_casual + all_trips_v2$day_of_week, FUN = mean)
+```
+
+We are breaking down ridership data by type and weekday.
+
+```{r}
+all_trips_v2 %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>%  
+  group_by(member_casual, weekday) %>%  
+  summarise(number_of_rides = n()							
+            ,average_duration = mean(ride_length)) %>% 		
+  arrange(member_casual, weekday)	
+```
+
+## Visualization	
+
+This section displays setups for various visualizations designated by ggplot, which is a part of the tidyverse package.  The "aes" is for aesthetic, which lets you choose your x & y axis and select some of your visual elements. The geom_ part offers multiple options and it's where you pick your chart type.  In this case, geom_col means you're picking a column chart.
+
+```{r}
+all_trips_v2 %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, weekday)  %>% 
+  ggplot(aes(x = weekday, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge")
+```
+
+```{r}
+all_trips_v2 %>% 
+  mutate(weekday = wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>% 
+  summarise(number_of_rides = n()
+            ,average_duration = mean(ride_length)) %>% 
+  arrange(member_casual, weekday)  %>% 
+  ggplot(aes(x = weekday, y = average_duration, fill = member_casual)) +
+  geom_col(position = "dodge")
+```
+
+## Export 
+
+Here we are creating the the dataframe that we want to export, which we will call "counts".
+
+```{r}
+counts <- aggregate(all_trips_v2$ride_length ~ all_trips_v2$member_casual + all_trips_v2$day_of_week, FUN = mean)
+```
+
+Here we use write_csv to make a csv file.
+
+```{r}
+write.csv(counts, '/Users/cjmai/Documents/Everything Related to R/Google Data Analytics Bike Share Project 1\\DataAnalyticsVisualization.csv', row.names = FALSE)
+```
